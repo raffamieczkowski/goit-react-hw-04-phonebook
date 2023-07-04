@@ -1,30 +1,22 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import { nanoid } from 'nanoid';
-import ContactForm from './ContactForm/ContactForm';
-import ContactList from './ContactForm/ContactList';
-import Filter from './ContactForm/Filter';
 
-class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+const App = () => {
+  const [contacts, setContacts] = useState([]);
+  const [filter, setFilter] = useState('');
 
-  componentDidMount() {
+  useEffect(() => {
     const storedContacts = localStorage.getItem('contacts');
     if (storedContacts) {
-      this.setState({ contacts: JSON.parse(storedContacts) });
+      setContacts(JSON.parse(storedContacts));
     }
-  }
+  }, []);
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.contacts !== this.state.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-    }
-  }
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-  addContact = (name, number) => {
-    const { contacts } = this.state;
+  const addContact = (name, number) => {
     if (contacts.some((contact) => contact.name.toLowerCase() === name.toLowerCase())) {
       alert(`"${name}" is already in contacts.`);
     } else {
@@ -33,39 +25,90 @@ class App extends Component {
         name,
         number,
       };
-      this.setState((prevState) => ({
-        contacts: [...prevState.contacts, newContact],
-      }));
+      setContacts((prevContacts) => [...prevContacts, newContact]);
     }
   };
 
-  deleteContact = (id) => {
-    this.setState((prevState) => ({
-      contacts: prevState.contacts.filter((contact) => contact.id !== id),
-    }));
+  const deleteContact = (id) => {
+    setContacts((prevContacts) => prevContacts.filter((contact) => contact.id !== id));
   };
 
-  handleFilterChange = (e) => {
-    this.setState({ filter: e.target.value });
+  return (
+    <div>
+      <h1>Phonebook</h1>
+      <ContactForm addContact={addContact} />
+
+      <h2>Contacts</h2>
+      <Filter filter={filter} setFilter={setFilter} />
+      <ContactList contacts={contacts} filter={filter} deleteContact={deleteContact} />
+    </div>
+  );
+};
+
+const ContactForm = ({ addContact }) => {
+  const [name, setName] = useState('');
+  const [number, setNumber] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    addContact(name, number);
+    setName('');
+    setNumber('');
   };
 
-  render() {
-    const { contacts, filter } = this.state;
-    const filteredContacts = contacts.filter((contact) =>
-      contact.name.toLowerCase().includes(filter.toLowerCase())
-    );
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        name="name"
+        pattern="^[a-zA-Zа-яА-Я]+(([' -][a-zA-Zа-яА-Я ])?[a-zA-Zа-яА-Я]*)*$"
+        title="Name may contain only letters, apostrophe, dash and spaces. For example Adrian, Jacob Mercer, Charles de Batz de Castelmore d'Artagnan"
+        placeholder="Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      <input
+        type="tel"
+        name="number"
+        pattern="\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}"
+        title="Phone number must be digits and can contain spaces, dashes, parentheses and can start with +"
+        placeholder="Number"
+        value={number}
+        onChange={(e) => setNumber(e.target.value)}
+        required
+      />
+      <button type="submit">Add Contact</button>
+    </form>
+  );
+};
 
-    return (
-      <div>
-        <h1>Phonebook</h1>
-        <ContactForm addContact={this.addContact} />
+const ContactList = ({ contacts, filter, deleteContact }) => {
+  const filteredContacts = contacts.filter((contact) =>
+    contact.name.toLowerCase().includes(filter.toLowerCase())
+  );
 
-        <h2>Contacts</h2>
-        <Filter filter={filter} setFilter={this.handleFilterChange} />
-        <ContactList contacts={filteredContacts} deleteContact={this.deleteContact} />
-      </div>
-    );
-  }
-}
+  return (
+    <ul>
+      {filteredContacts.map((contact) => (
+        <li key={contact.id}>
+          {contact.name}: {contact.number}
+          <button onClick={() => deleteContact(contact.id)}>Delete</button>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+const Filter = ({ filter, setFilter }) => {
+  return (
+    <input
+      type="text"
+      placeholder="Search..."
+      value={filter}
+      onChange={(e) => setFilter(e.target.value)}
+    />
+  );
+};
 
 export default App;
